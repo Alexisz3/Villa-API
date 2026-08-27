@@ -5,4 +5,10 @@ node_modules
 backend/src/generated
 
 # Claude Code local settings
-.claude/settings.local.json
+.claude/
+
+# AI Assistants and Agents
+.agents/
+.windsurf/
+.mcp.json
+skills-lock.json
