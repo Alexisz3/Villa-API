@@ -24,6 +24,7 @@ import { MediaService } from './media.service';
 import { QueryMediaDto } from './dto/query-media.dto';
 import { UpdateMediaDto } from './dto/update-media.dto';
 import { UploadMediaDto } from './dto/upload-media.dto';
+import { AssignFoldersDto } from './dto/assign-folders.dto';
 
 @ApiTags('Media')
 @Controller('media')
@@ -44,6 +45,14 @@ export class MediaController {
   @Get('folders')
   folders() {
     return this.mediaService.listFolders();
+  }
+
+  @UseGuards(AuthGuard, PermissionsGuard)
+  @RequirePermissions('media:update')
+  @ApiBearerAuth()
+  @Patch('folders')
+  assignFolders(@Body() dto: AssignFoldersDto) {
+    return this.mediaService.assignFolders(dto.items);
   }
 
   @UseGuards(AuthGuard, PermissionsGuard)

@@ -10,9 +10,11 @@ const prismaMock = {
     count: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
   },
   contentSection: { findMany: jest.fn() },
   room: { findMany: jest.fn() },
+  $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
 };
 
 describe('MediaService', () => {
@@ -114,6 +116,42 @@ describe('MediaService', () => {
       const arg = prismaMock.mediaAsset.findMany.mock.calls[0][0];
       expect(arg.where.deletedAt).toBeNull();
       expect(arg.distinct).toEqual(['folder']);
+    });
+  });
+
+  describe('assignFolders', () => {
+    it('agrupa por carpeta destino y hace un updateMany por grupo', async () => {
+      prismaMock.mediaAsset.updateMany
+        .mockResolvedValueOnce({ count: 2 })
+        .mockResolvedValueOnce({ count: 1 });
+
+      const result = await service.assignFolders([
+        { id: 1, folder: 'cavas' },
+        { id: 2, folder: 'cavas' },
+        { id: 3, folder: 'inicio' },
+      ]);
+
+      expect(result).toEqual({ updated: 3 });
+      expect(prismaMock.mediaAsset.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [1, 2] } },
+        data: { folder: 'cavas' },
+      });
+      expect(prismaMock.mediaAsset.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [3] } },
+        data: { folder: 'inicio' },
+      });
+      expect(prismaMock.$transaction).toHaveBeenCalled();
+    });
+
+    it('normaliza carpeta vacia a "general"', async () => {
+      prismaMock.mediaAsset.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.assignFolders([{ id: 9, folder: '  ' }]);
+
+      expect(prismaMock.mediaAsset.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [9] } },
+        data: { folder: 'general' },
+      });
     });
   });
 

@@ -61,6 +61,27 @@ export class MediaService {
     return rows.map((row) => row.folder);
   }
 
+  // Reasigna la carpeta de varios recursos de una sola vez, en una
+  // transaccion (un `updateMany` por carpeta destino).
+  async assignFolders(items: { id: number; folder: string }[]) {
+    const byFolder = new Map<string, number[]>();
+    for (const item of items) {
+      const folder = item.folder.trim() || 'general';
+      byFolder.set(folder, [...(byFolder.get(folder) ?? []), item.id]);
+    }
+
+    const results = await this.prisma.$transaction(
+      [...byFolder].map(([folder, ids]) =>
+        this.prisma.mediaAsset.updateMany({
+          where: { id: { in: ids } },
+          data: { folder },
+        }),
+      ),
+    );
+
+    return { updated: results.reduce((sum, r) => sum + r.count, 0) };
+  }
+
   async list(query: QueryMediaDto) {
     const page = query.page ?? 1;
     const pageSize = Math.min(query.pageSize ?? 40, 500);
