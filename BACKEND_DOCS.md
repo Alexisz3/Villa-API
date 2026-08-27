@@ -23,6 +23,10 @@ Se diseñó una estructura de base de datos relacional altamente escalable en `s
 - **Reservation:** Gestión de reservas de clientes por habitación.
 - **Customer:** Base de datos de huéspedes reales.
 - **Page / ContentSection:** Gestor de contenidos dinámicos (CMS) para la web.
+- **MediaAsset:** Biblioteca de medios central (tabla `media_assets`). Cada archivo subido a `/uploads` se registra aquí como recurso propio, reutilizable en varias secciones o habitaciones. La columna `path` (`/uploads/<archivo>`) es la clave de unión — `ContentSection.banner`, `ContentSection.images` y `Room.photoUrl` guardan ese string, no el `id`.
+  - **Borrado lógico:** borrar una sección (o quitarle una imagen) ya **no borra ningún archivo** del disco; solo lo desvincula. Eliminar un recurso se hace desde la biblioteca (`DELETE /api/media/:id`), que primero verifica que nadie lo referencie (responde `409` si está en uso) y, si está libre, marca `deletedAt` (papelera) dejando el archivo en disco. Se restaura con `POST /api/media/:id/restore`.
+  - Permisos: `media:read`, `media:create`, `media:update`, `media:delete`.
+  - Backfill de lo ya existente: `npx tsx prisma/backfill-media.ts` (una sola vez, idempotente).
 
 **Módulo de Seguridad y Accesos (RBAC):**
 - **User:** Credenciales de los administradores (contraseñas encriptadas).
@@ -65,6 +69,9 @@ El sistema está protegido mediante un esquema de **Role-Based Access Control (R
 | **Install** | `/api/installations`            | `GET`                    | Público               | Listar el catálogo de instalaciones. |
 | **Install** | `/api/installations`            | `POST`, `PATCH`, `DELETE`| Privado (`admin`)     | Gestión de instalaciones adicionales. |
 | **Rooms**   | `/api/rooms`                    | `GET`, `POST`, `PATCH`   | Mixto                 | Gestión de habitaciones reservables. |
+| **Media**   | `/api/media`                    | `GET`, `POST`            | Privado (`media:*`)   | Listar y subir a la biblioteca de medios. |
+| **Media**   | `/api/media/:id`                | `PATCH`, `DELETE`        | Privado (`media:*`)   | Editar metadatos / enviar a papelera (borrado lógico). |
+| **Media**   | `/api/media/:id/restore`        | `POST`                   | Privado (`media:update`)| Restaurar un recurso desde la papelera. |
 
 ---
 
