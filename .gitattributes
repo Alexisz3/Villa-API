@@ -1,0 +1,7 @@
+# Los archivos que se ejecutan dentro del contenedor Linux (Alpine) deben
+# tener saltos de linea LF siempre, sin importar el core.autocrlf del que
+# clona. Un script .sh con CRLF revienta con "/bin/sh: bad interpreter".
+*.sh            text eol=lf
+backend/entrypoint.sh text eol=lf
+Dockerfile      text eol=lf
+*.dockerfile    text eol=lf
