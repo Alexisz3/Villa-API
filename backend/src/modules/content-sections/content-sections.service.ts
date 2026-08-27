@@ -1,6 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { unlink } from 'fs/promises';
-import { join } from 'path';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateContentSectionDto } from './dto/create-content-section.dto';
 import { UpdateContentSectionDto } from './dto/update-content-section.dto';
@@ -55,11 +53,14 @@ export class ContentSectionsService {
 
     const { imagesToRemove, images: newImages, removeBanner, banner: newBanner, ...rest } = dto;
 
+    // Quitar una imagen de una sección solo la DESVINCULA: el archivo sigue
+    // en disco y en la biblioteca de medios (puede estar en uso en otro
+    // lado). La eliminación real se hace desde la biblioteca, con borrado
+    // lógico y chequeo de referencias.
     let images = current.images;
     if (imagesToRemove?.length) {
       const toRemove = new Set(imagesToRemove);
       images = images.filter((path) => !toRemove.has(path));
-      await this.deleteUploadedFiles(imagesToRemove);
     }
     if (newImages?.length) {
       images = [...images, ...newImages];
@@ -67,14 +68,8 @@ export class ContentSectionsService {
 
     let banner = current.banner;
     if (removeBanner) {
-      if (current.banner) {
-        await this.deleteUploadedFiles([current.banner]);
-      }
       banner = null;
     } else if (newBanner) {
-      if (current.banner && newBanner !== current.banner) {
-        await this.deleteUploadedFiles([current.banner]);
-      }
       banner = newBanner;
     }
 
@@ -93,26 +88,9 @@ export class ContentSectionsService {
       throw new NotFoundException('Sección de contenido no encontrada.');
     }
 
-    const filesToClean = [current.banner, ...current.images].filter(
-      (path): path is string => !!path,
-    );
-    await this.deleteUploadedFiles(filesToClean);
-
+    // No se tocan los archivos: pueden estar referenciados por otras
+    // secciones o habitaciones. Quedan en la biblioteca como recursos sin
+    // usar y se eliminan desde ahí.
     return this.prisma.contentSection.delete({ where: { id } });
-  }
-
-  private async deleteUploadedFiles(paths: string[]) {
-    await Promise.all(
-      paths.map(async (filePath) => {
-        const match = /^\/uploads\/([^/\\]+)$/.exec(filePath);
-        if (!match) return;
-
-        try {
-          await unlink(join(process.cwd(), 'uploads', match[1]));
-        } catch {
-          // Ya no existe o nunca existió — nada que limpiar.
-        }
-      }),
-    );
   }
 }

@@ -31,4 +31,10 @@ export class CreateContentSectionDto {
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   isActive?: boolean;
+
+  // No se persiste en la sección: solo indica en qué carpeta de la
+  // biblioteca de medios se registran los archivos subidos en esta request.
+  @IsString()
+  @IsOptional()
+  folder?: string;
 }
