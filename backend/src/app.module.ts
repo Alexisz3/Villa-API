@@ -15,6 +15,7 @@ import { InstallationsModule } from './modules/installations/installations.modul
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
 import { ContentSectionsModule } from './modules/content-sections/content-sections.module';
+import { MediaModule } from './modules/media/media.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ContentSectionsModule } from './modules/content-sections/content-sectio
     RoomsModule,
     ReservationsModule,
     ContentSectionsModule,
+    MediaModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 30,

@@ -177,3 +177,33 @@ model ContentSection {
 
   @@map("content_sections")
 }
+
+// Biblioteca de medios central. Cada archivo subido a /uploads se registra
+// aquí como un recurso propio, reutilizable en varias secciones o
+// habitaciones. La columna `path` ("/uploads/<archivo>") es la clave de
+// unión: ContentSection.banner / ContentSection.images / Room.photoUrl
+// guardan ese mismo string, no el id.
+//
+// Borrado lógico: borrar una sección NUNCA toca los archivos. Eliminar un
+// recurso desde la biblioteca solo marca `deletedAt` (papelera) y deja el
+// archivo en disco; se puede restaurar. La purga real (borrar el archivo
+// del disco) queda para una fase posterior.
+model MediaAsset {
+  id           Int       @id @default(autoincrement())
+  filename     String
+  path         String    @unique
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  width        Int?
+  height       Int?
+  alt          String?
+  folder       String    @default("general")
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([folder])
+  @@index([deletedAt])
+  @@map("media_assets")
+}

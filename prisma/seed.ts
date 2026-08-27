@@ -138,6 +138,10 @@ async function main() {
     { code: 'content_sections:create', description: 'Create content sections' },
     { code: 'content_sections:update', description: 'Update content sections' },
     { code: 'content_sections:delete', description: 'Delete content sections' },
+    { code: 'media:read', description: 'Read the media library' },
+    { code: 'media:create', description: 'Upload files to the media library' },
+    { code: 'media:update', description: 'Edit media metadata and restore from trash' },
+    { code: 'media:delete', description: 'Send media assets to the trash' },
     { code: 'users:create', description: 'Register new admin users' },
 
   ];
