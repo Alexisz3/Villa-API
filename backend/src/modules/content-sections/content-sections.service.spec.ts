@@ -41,6 +41,18 @@ describe('ContentSectionsService', () => {
       expect(arg.where).toEqual({ sectionName: 'home-intro' });
       expect(arg.create.images).toEqual([]);
       expect(arg.create.isActive).toBe(true);
+      expect(arg.create).not.toHaveProperty('data');
+    });
+
+    it('persiste el contenido estructurado (data) cuando viene', async () => {
+      prismaMock.contentSection.upsert.mockResolvedValue({ id: 1 });
+      const data = { items: [{ image: '/uploads/a.webp', name: 'Uno' }] };
+
+      await service.create({ sectionName: 'home-personajes', data } as any);
+
+      const arg = prismaMock.contentSection.upsert.mock.calls[0][0];
+      expect(arg.create.data).toEqual(data);
+      expect(arg.update.data).toEqual(data);
     });
   });
 
@@ -81,6 +93,23 @@ describe('ContentSectionsService', () => {
 
       const data = prismaMock.contentSection.update.mock.calls[0][0].data;
       expect(data.images).toEqual(['/uploads/a.png', '/uploads/d.png']);
+    });
+
+    it('actualiza el contenido estructurado (data) sin tocar imágenes ni banner', async () => {
+      prismaMock.contentSection.findUnique.mockResolvedValue({
+        id: 1,
+        banner: '/uploads/keep.png',
+        images: ['/uploads/x.png'],
+      });
+      prismaMock.contentSection.update.mockResolvedValue({ id: 1 });
+      const structured = { items: [{ image: '/uploads/p1.webp', name: 'Uno' }] };
+
+      await service.update(1, { data: structured } as any);
+
+      const arg = prismaMock.contentSection.update.mock.calls[0][0].data;
+      expect(arg.data).toEqual(structured);
+      expect(arg.banner).toBe('/uploads/keep.png');
+      expect(arg.images).toEqual(['/uploads/x.png']);
     });
 
     it('clears the banner on removeBanner without touching the file', async () => {

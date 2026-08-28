@@ -1,7 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { Prisma } from '../../generated/prisma/client';
 import { CreateContentSectionDto } from './dto/create-content-section.dto';
 import { UpdateContentSectionDto } from './dto/update-content-section.dto';
+
+// El contenido estructurado llega como objeto plano; Prisma lo quiere tipado
+// como InputJsonValue para escribirlo en la columna jsonb.
+function toJson(
+  value: Record<string, unknown> | undefined,
+): Prisma.InputJsonValue | undefined {
+  return value === undefined ? undefined : (value as Prisma.InputJsonValue);
+}
 
 @Injectable()
 export class ContentSectionsService {
@@ -20,6 +29,8 @@ export class ContentSectionsService {
   }
 
   create(dto: CreateContentSectionDto) {
+    const dataValue = toJson(dto.data);
+
     return this.prisma.contentSection.upsert({
       where: {
         sectionName: dto.sectionName,
@@ -30,6 +41,7 @@ export class ContentSectionsService {
         description: dto.description,
         banner: dto.banner,
         images: dto.images || [],
+        ...(dataValue !== undefined ? { data: dataValue } : {}),
         isActive: dto.isActive ?? true,
       },
       update: {
@@ -37,6 +49,7 @@ export class ContentSectionsService {
         description: dto.description,
         banner: dto.banner,
         images: dto.images ? dto.images : undefined, // Update only if provided, or handle array logic appropriately (for simplicity replacing if provided)
+        ...(dataValue !== undefined ? { data: dataValue } : {}),
         isActive: dto.isActive ?? true,
       },
     });
@@ -51,7 +64,14 @@ export class ContentSectionsService {
       throw new NotFoundException('Sección de contenido no encontrada.');
     }
 
-    const { imagesToRemove, images: newImages, removeBanner, banner: newBanner, ...rest } = dto;
+    const {
+      imagesToRemove,
+      images: newImages,
+      removeBanner,
+      banner: newBanner,
+      data,
+      ...rest
+    } = dto;
 
     // Quitar una imagen de una sección solo la DESVINCULA: el archivo sigue
     // en disco y en la biblioteca de medios (puede estar en uso en otro
@@ -73,9 +93,16 @@ export class ContentSectionsService {
       banner = newBanner;
     }
 
+    const dataValue = toJson(data);
+
     return this.prisma.contentSection.update({
       where: { id },
-      data: { ...rest, banner, images },
+      data: {
+        ...rest,
+        banner,
+        images,
+        ...(dataValue !== undefined ? { data: dataValue } : {}),
+      },
     });
   }
 

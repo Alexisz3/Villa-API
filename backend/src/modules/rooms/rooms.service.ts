@@ -2,11 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { PrismaService } from '../../database/prisma.service';
+import { AvailabilityService, BLOCKING_STATUSES } from './availability.service';
 
 @Injectable()
 export class RoomsService {
 
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private availability: AvailabilityService,
+  ) { }
 
   async create(createRoomDto: CreateRoomDto) {
     return this.prisma.room.create({
@@ -15,7 +19,7 @@ export class RoomsService {
   }
 
   async findAll() {
-    return this.prisma.room.findMany({
+    const rooms = await this.prisma.room.findMany({
       where: {
         isActive: true,
         status: { equals: 'active', mode: 'insensitive' },
@@ -24,15 +28,18 @@ export class RoomsService {
         createdAt: 'desc',
       }
     });
+    // El sitio público ve el estado de disponibilidad pero no datos del huésped.
+    return this.availability.attach(rooms, { includeGuest: false });
   }
 
   // TODAS las habitaciones (incluidas las inactivas), para el panel de admin.
   async findAllForAdmin() {
-    return this.prisma.room.findMany({
+    const rooms = await this.prisma.room.findMany({
       orderBy: {
         createdAt: 'desc',
       },
     });
+    return this.availability.attach(rooms, { includeGuest: true });
   }
 
   // BUSCAR HABITACIONES DISPONIBLES EN UNAS FECHAS
@@ -44,9 +51,12 @@ export class RoomsService {
       where: {
         isActive: true,
         status: { equals: 'active', mode: 'insensitive' },
+        // Solo PENDIENTE / CONFIRMADA ocupan la habitación — una reserva
+        // COMPLETADA o CANCELADA no impide una reserva nueva en esas fechas.
+        // Misma regla que AvailabilityService y los chequeos de choque.
         reservations: {
           none: {
-            status: { not: 'CANCELADA' },
+            status: { in: [...BLOCKING_STATUSES] },
             AND: [
               { checkIn: { lt: checkOutDate } },
               { checkOut: { gt: checkInDate } },

@@ -12,7 +12,9 @@ export class ContactMessagesService {
                 name: dto.name,
                 email: dto.email,
                 phone: dto.phone,
+                subject: dto.subject,
                 message: dto.message,
+                ...(dto.channel ? { channel: dto.channel } : {}),
             },
         });
     }

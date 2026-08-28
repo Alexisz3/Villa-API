@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsDateString, IsNumber, IsEmail, IsPhoneNumber } from "class-validator";
+import { IsString, IsNotEmpty, IsOptional, IsDateString, IsNumber, IsEmail, MaxLength } from "class-validator";
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateReservationDto {
@@ -42,8 +42,13 @@ export class CreateReservationDto {
     @IsNotEmpty()
     email: string;
 
-    @ApiProperty({ description: 'Phone number of the customer', example: '+1234567890', required: false })
-    @IsPhoneNumber()
+    // Campo de contacto opcional: el equipo llama/escribe manualmente para
+    // confirmar, así que aceptamos cualquier formato razonable (local con o
+    // sin código de país, espacios, guiones) en vez de rechazar la reserva
+    // por un detalle de formato. Mismo criterio que el formulario de contacto.
+    @ApiProperty({ description: 'Phone number of the customer', example: '+593 98 736 6584', required: false, maxLength: 30 })
+    @IsString()
+    @MaxLength(30)
     @IsOptional()
     phone?: string;
 

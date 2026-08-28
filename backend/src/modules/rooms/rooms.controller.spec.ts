@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoomsController } from './rooms.controller';
 import { RoomsService } from './rooms.service';
+import { AvailabilityService } from './availability.service';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -14,6 +15,7 @@ describe('RoomsController', () => {
       providers: [
         RoomsService,
         { provide: PrismaService, useValue: {} },
+        { provide: AvailabilityService, useValue: { attach: jest.fn() } },
       ],
     })
       .overrideGuard(AuthGuard)

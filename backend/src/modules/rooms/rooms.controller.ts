@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, BadRequestException, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, ParseIntPipe, UseGuards, BadRequestException, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -92,8 +92,8 @@ export class RoomsController {
   @ApiOperation({ summary: 'Get a room by id' })
   @ApiResponse({ status: 200, description: 'Return the room.' })
   @ApiResponse({ status: 404, description: 'Room not found.' })
-  findOne(@Param('id') id: string) {
-    return this.roomsService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.roomsService.findOne(id);
   }
 
   @UseGuards(AuthGuard, PermissionsGuard)
@@ -103,7 +103,7 @@ export class RoomsController {
   @ApiOperation({ summary: 'Update a room' })
   @ApiResponse({ status: 200, description: 'The room has been successfully updated.' })
   @ApiResponse({ status: 404, description: 'Room not found.' })
-  update(@Param('id') id: string, @Body() updateRoomDto: UpdateRoomDto) {
-    return this.roomsService.update(+id, updateRoomDto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateRoomDto: UpdateRoomDto) {
+    return this.roomsService.update(id, updateRoomDto);
   }
 }

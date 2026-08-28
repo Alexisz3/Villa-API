@@ -2,6 +2,14 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { PrismaService } from '../../database/prisma.service';
+import { BLOCKING_STATUSES } from '../rooms/availability.service';
+
+// Estados que "ocupan" una habitación en el calendario. Una reserva CANCELADA
+// no bloquea; una COMPLETADA tampoco (la estadía ya terminó). Se usa la misma
+// lista en el formulario público, los chequeos de choque y las tarjetas del
+// admin para que todo muestre lo mismo. La constraint EXCLUDE de la BD es más
+// estricta a propósito (red de seguridad ante condiciones de carrera).
+const blocks = { in: [...BLOCKING_STATUSES] };
 
 @Injectable()
 export class ReservationsService {
@@ -40,7 +48,7 @@ export class ReservationsService {
     const conflictingReservation = await this.prisma.reservation.findFirst({
       where: {
         roomId: dto.roomId,
-        status: { not: 'CANCELADA' }, // Ignoramos las reservas canceladas
+        status: blocks, // solo PENDIENTE / CONFIRMADA bloquean
         AND: [
           { checkIn: { lt: checkOutDate } }, // La entrada es antes de que el nuevo salga
           { checkOut: { gt: checkInDate } }, // La salida es después de que el nuevo entre
@@ -69,6 +77,7 @@ export class ReservationsService {
     // traducimos al mismo mensaje amigable de siempre.
     try {
       return await this.prisma.reservation.create({
+        include: { room: true, customer: true },
         data: {
           checkIn: checkInDate,
           checkOut: checkOutDate,
@@ -123,7 +132,7 @@ export class ReservationsService {
         // Y que NO tengan reservas que se crucen con estas fechas
         reservations: {
           none: {
-            status: { not: 'CANCELADA' },
+            status: blocks,
             AND: [
               { checkIn: { lt: checkOutDate } },
               { checkOut: { gt: checkInDate } },
@@ -175,7 +184,7 @@ export class ReservationsService {
         where: {
           id: { not: id },
           roomId: nextRoomId,
-          status: { not: 'CANCELADA' },
+          status: blocks,
           AND: [
             { checkIn: { lt: nextCheckOut } },
             { checkOut: { gt: nextCheckIn } },
@@ -199,6 +208,7 @@ export class ReservationsService {
       return await this.prisma.reservation.update({
         where: { id },
         data: dataToUpdate,
+        include: { room: true, customer: true },
       });
     } catch (error) {
       if (this.isOverlapConstraintError(error)) {

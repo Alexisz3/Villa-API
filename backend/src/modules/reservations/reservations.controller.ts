@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ReservationsService } from './reservations.service';
+import { ReservationsMaintenanceService } from './reservations-maintenance.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { AuthGuard } from '../auth/auth.guard';
@@ -10,7 +11,21 @@ import { RequirePermissions } from '../auth/decorators/require-permissions.decor
 @ApiTags('Reservations')
 @Controller('reservations')
 export class ReservationsController {
-  constructor(private readonly reservationsService: ReservationsService) { }
+  constructor(
+    private readonly reservationsService: ReservationsService,
+    private readonly maintenance: ReservationsMaintenanceService,
+  ) { }
+
+  // Dispara a mano el mismo mantenimiento que corre el cron diario
+  // (CONFIRMADA vencida -> COMPLETADA, PENDIENTE vencida -> CANCELADA).
+  @UseGuards(AuthGuard, PermissionsGuard)
+  @RequirePermissions('reservations:update')
+  @ApiBearerAuth()
+  @Post('run-maintenance')
+  @ApiOperation({ summary: 'Run reservation lifecycle maintenance now' })
+  runMaintenance() {
+    return this.maintenance.run();
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new reservation' })
@@ -37,8 +52,8 @@ export class ReservationsController {
   @ApiOperation({ summary: 'Get a reservation by id' })
   @ApiResponse({ status: 200, description: 'Return the reservation.' })
   @ApiResponse({ status: 404, description: 'Reservation not found.' })
-  findOne(@Param('id') id: string) {
-    return this.reservationsService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.reservationsService.findOne(id);
   }
 
   @UseGuards(AuthGuard, PermissionsGuard)
@@ -48,8 +63,8 @@ export class ReservationsController {
   @ApiOperation({ summary: 'Update a reservation' })
   @ApiResponse({ status: 200, description: 'The reservation has been successfully updated.' })
   @ApiResponse({ status: 404, description: 'Reservation not found.' })
-  update(@Param('id') id: string, @Body() updateReservationDto: UpdateReservationDto) {
-    return this.reservationsService.update(+id, updateReservationDto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateReservationDto: UpdateReservationDto) {
+    return this.reservationsService.update(id, updateReservationDto);
   }
 
   @UseGuards(AuthGuard, PermissionsGuard)
@@ -59,8 +74,8 @@ export class ReservationsController {
   @ApiOperation({ summary: 'Delete a reservation' })
   @ApiResponse({ status: 200, description: 'The reservation has been successfully deleted.' })
   @ApiResponse({ status: 404, description: 'Reservation not found.' })
-  remove(@Param('id') id: string) {
-    return this.reservationsService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.reservationsService.remove(id);
   }
 
   @UseGuards(AuthGuard, PermissionsGuard)

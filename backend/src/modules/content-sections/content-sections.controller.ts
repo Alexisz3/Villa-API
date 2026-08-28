@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiConsumes } from '@nestjs/swagger';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '../auth/auth.guard';
@@ -68,7 +68,7 @@ export class ContentSectionsController {
   ], { storage, ...imageUploadLimits }))
   @ApiConsumes('multipart/form-data')
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateContentSectionDto,
     @UploadedFiles() files: { banner?: Express.Multer.File[], images?: Express.Multer.File[] }
   ) {
@@ -83,14 +83,14 @@ export class ContentSectionsController {
     if (files?.images?.length) {
       dto.images = files.images.map(f => `/uploads/${f.filename}`);
     }
-    return this.contentSectionsService.update(+id, dto);
+    return this.contentSectionsService.update(id, dto);
   }
 
   @UseGuards(AuthGuard, PermissionsGuard)
   @RequirePermissions('content_sections:delete')
   @ApiBearerAuth()
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.contentSectionsService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.contentSectionsService.remove(id);
   }
 }

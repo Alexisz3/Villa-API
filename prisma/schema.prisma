@@ -13,7 +13,12 @@ model ContactMessage {
   name      String
   email     String
   phone     String?
+  subject   String?
   message   String
+  // Canal por el que llegó el contacto: "whatsapp" (canal principal del
+  // formulario) o "email". En el flujo WhatsApp el visitante igual llena todos
+  // sus datos, así que se registran aquí además de abrir wa.me.
+  channel   String   @default("email")
   status    String   @default("pendiente")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -123,13 +128,12 @@ model Customer {
 // Nota: la tabla "reservations" tiene además una columna generada
 // "dateRange" y una restricción EXCLUDE (GiST) que impide dos reservas
 // cruzadas para la misma habitación, agregadas en la migración
-// 20260825140000_reservation_no_overlap_constraint. Prisma no puede
-// declarar ese tipo de restricción en este schema, así que vive solo en
-// el SQL de la migración — no la borres si algún día regeneras el schema
-// desde la base de datos.
-
-
-
+// 20260825140000_reservation_no_overlap_constraint. La migración
+// 20260828160000_reservation_overlap_ignores_completed la ajustó para que
+// solo apliquen los estados PENDIENTE y CONFIRMADA (una reserva COMPLETADA
+// o CANCELADA ya no ocupa el calendario). Prisma no puede declarar ese tipo
+// de restricción en este schema, así que vive solo en el SQL de la
+// migración — no la borres si algún día regeneras el schema desde la BD.
 
 model Reservation {
   id            Int      @id @default(autoincrement())
@@ -151,7 +155,6 @@ model Reservation {
   @@map("reservations")
 }
 
-
 // model Page {
 //   id        Int      @id @default(autoincrement())
 //   slug      String   @unique
@@ -171,6 +174,11 @@ model ContentSection {
   title       String?
   description String?  @db.Text
   images      String[]
+  // Contenido estructurado para las secciones que no entran en
+  // title/description/images: listas de ítems con varios campos cada uno
+  // (personajes con imagen+cursor+nombre, testimonios, aliados). Las
+  // secciones simples lo dejan en null. Cada editor del panel define su forma.
+  data        Json?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -188,6 +196,7 @@ model ContentSection {
 // recurso desde la biblioteca solo marca `deletedAt` (papelera) y deja el
 // archivo en disco; se puede restaurar. La purga real (borrar el archivo
 // del disco) queda para una fase posterior.
+
 model MediaAsset {
   id           Int       @id @default(autoincrement())
   filename     String

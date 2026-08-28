@@ -117,8 +117,9 @@ describe('ContentSectionsController', () => {
     it('keeps body-provided image paths when no files are uploaded', async () => {
       serviceMock.update.mockResolvedValue({ id: 3 });
 
+      // ParseIntPipe ya convirtió el :id a number antes de llegar aquí.
       await controller.update(
-        '3',
+        3,
         { images: ['/uploads/from-library.png'] },
         {},
       );

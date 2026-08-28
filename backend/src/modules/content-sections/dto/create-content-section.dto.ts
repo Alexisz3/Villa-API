@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsObject, IsOptional, IsString, IsArray } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateContentSectionDto {
@@ -31,6 +31,20 @@ export class CreateContentSectionDto {
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   isActive?: boolean;
+
+  // Contenido estructurado (listas de ítems). Llega como objeto en un body
+  // JSON, o como string JSON si viene en multipart — se parsea en ese caso.
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  })
+  @IsObject()
+  data?: Record<string, unknown>;
 
   // No se persiste en la sección: solo indica en qué carpeta de la
   // biblioteca de medios se registran los archivos subidos en esta request.

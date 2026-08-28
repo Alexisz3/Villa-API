@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { RoomsController } from './rooms.controller';
+import { AvailabilityService } from './availability.service';
 import { DatabaseModule } from 'src/database/database.module';
 
 
@@ -9,7 +10,7 @@ import { AuthModule } from '../auth/auth.module';
 @Module({
   imports: [DatabaseModule, AuthModule],
   controllers: [RoomsController],
-  providers: [RoomsService],
+  providers: [RoomsService, AvailabilityService],
 })
 export class RoomsModule { }
 
