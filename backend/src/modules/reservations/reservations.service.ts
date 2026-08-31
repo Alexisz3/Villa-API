@@ -201,8 +201,27 @@ export class ReservationsService {
     if (roomId !== undefined) dataToUpdate.roomId = roomId;
     if (checkIn !== undefined) dataToUpdate.checkIn = nextCheckIn;
     if (checkOut !== undefined) dataToUpdate.checkOut = nextCheckOut;
-    if (totalPrice !== undefined) dataToUpdate.totalPrice = totalPrice;
     if (status !== undefined) dataToUpdate.status = status;
+
+    // Si cambian fechas y/o habitación y el caller no mandó un totalPrice
+    // explícito, recalculamos con el precio por noche vigente (misma fórmula
+    // que create()). Evita que el admin mueva una reserva de fechas/cabaña
+    // desde el panel y el precio se quede desactualizado.
+    if (totalPrice !== undefined) {
+      dataToUpdate.totalPrice = totalPrice;
+    } else if (roomId !== undefined || checkIn !== undefined || checkOut !== undefined) {
+      const room = roomId !== undefined
+        ? await this.prisma.room.findUnique({ where: { id: nextRoomId } })
+        : existing.room;
+
+      if (!room) {
+        throw new BadRequestException('La cabaña seleccionada no existe.');
+      }
+
+      const diffTime = Math.abs(nextCheckOut.getTime() - nextCheckIn.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      dataToUpdate.totalPrice = diffDays * Number(room.pricePerNight);
+    }
 
     try {
       return await this.prisma.reservation.update({

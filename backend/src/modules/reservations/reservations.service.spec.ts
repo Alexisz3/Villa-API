@@ -222,6 +222,7 @@ describe('ReservationsService', () => {
         roomId: 1,
         checkIn: new Date(inDays(10)),
         checkOut: new Date(inDays(14)),
+        room: activeRoom,
       });
       prismaMock.reservation.findFirst.mockResolvedValue(null);
       prismaMock.reservation.update.mockRejectedValue({
@@ -231,6 +232,61 @@ describe('ReservationsService', () => {
       await expect(
         service.update(1, { checkIn: inDays(11), checkOut: inDays(16) }),
       ).rejects.toThrow(/ya está reservada/);
+    });
+
+    it('recalcula totalPrice al cambiar fechas usando el precio de la habitación actual', async () => {
+      prismaMock.reservation.findUnique.mockResolvedValue({
+        id: 1,
+        roomId: 1,
+        checkIn: new Date(inDays(10)),
+        checkOut: new Date(inDays(14)), // 4 noches originales
+        room: activeRoom, // pricePerNight: '100'
+      });
+      prismaMock.reservation.findFirst.mockResolvedValue(null);
+      prismaMock.reservation.update.mockResolvedValue({ id: 1 });
+
+      // Estira la salida 2 noches más: 10 -> 16 = 6 noches
+      await service.update(1, { checkIn: inDays(10), checkOut: inDays(16) });
+
+      const data = prismaMock.reservation.update.mock.calls[0][0].data;
+      expect(data.totalPrice).toBe(600);
+      expect(prismaMock.room.findUnique).not.toHaveBeenCalled(); // reusa existing.room, no re-consulta
+    });
+
+    it('recalcula totalPrice con el precio de la nueva habitación al reasignar roomId', async () => {
+      prismaMock.reservation.findUnique.mockResolvedValue({
+        id: 1,
+        roomId: 1,
+        checkIn: new Date(inDays(10)),
+        checkOut: new Date(inDays(14)), // 4 noches
+        room: activeRoom, // pricePerNight: '100'
+      });
+      prismaMock.reservation.findFirst.mockResolvedValue(null);
+      prismaMock.room.findUnique.mockResolvedValue({ ...activeRoom, id: 2, pricePerNight: '150' });
+      prismaMock.reservation.update.mockResolvedValue({ id: 1 });
+
+      await service.update(1, { roomId: 2 });
+
+      expect(prismaMock.room.findUnique).toHaveBeenCalledWith({ where: { id: 2 } });
+      const data = prismaMock.reservation.update.mock.calls[0][0].data;
+      expect(data.totalPrice).toBe(600); // 4 noches * 150
+    });
+
+    it('respeta un totalPrice explícito y no lo recalcula', async () => {
+      prismaMock.reservation.findUnique.mockResolvedValue({
+        id: 1,
+        roomId: 1,
+        checkIn: new Date(inDays(10)),
+        checkOut: new Date(inDays(14)),
+        room: activeRoom,
+      });
+      prismaMock.reservation.findFirst.mockResolvedValue(null);
+      prismaMock.reservation.update.mockResolvedValue({ id: 1 });
+
+      await service.update(1, { checkIn: inDays(10), checkOut: inDays(16), totalPrice: 999 });
+
+      const data = prismaMock.reservation.update.mock.calls[0][0].data;
+      expect(data.totalPrice).toBe(999);
     });
   });
 

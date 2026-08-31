@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp } from './utils/bootstrap';
+import { createTestApp, loginAsAdmin } from './utils/bootstrap';
 import { PrismaService } from '../src/database/prisma.service';
 
 // Fechas siempre en el futuro para pasar la validación "checkIn > ahora".
@@ -164,5 +164,75 @@ describe('Reservations (e2e) — anti-solapamiento', () => {
       .expect(201);
     expect(res.body.room?.name).toBeTruthy();
     expect(res.body.customer?.email).toBe('ada@example.com');
+  });
+
+  describe('PATCH /reservations/:id — edición desde el panel (fechas/habitación)', () => {
+    it('recalcula totalPrice al cambiar las fechas', async () => {
+      const cookie = await loginAsAdmin(app);
+      const created = await request(app.getHttpServer())
+        .post('/api/reservations')
+        .send(booking()) // 10 -> 14 = 4 noches, room 1 @ 120 = 480
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/reservations/${created.body.id}`)
+        .set('Cookie', cookie)
+        .send({ checkIn: inDays(10), checkOut: inDays(16) }) // 6 noches
+        .expect(200);
+
+      expect(Number(res.body.totalPrice)).toBe(720); // 6 * 120
+    });
+
+    it('recalcula totalPrice con el precio de la nueva habitación al reasignar', async () => {
+      const cookie = await loginAsAdmin(app);
+      const created = await request(app.getHttpServer())
+        .post('/api/reservations')
+        .send(booking()) // 4 noches, room 1 @ 120 = 480
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/reservations/${created.body.id}`)
+        .set('Cookie', cookie)
+        .send({ roomId: 2 }) // room 2 = 180/noche
+        .expect(200);
+
+      expect(Number(res.body.totalPrice)).toBe(720); // 4 * 180
+    });
+
+    it('rechaza (400) mover una reserva a fechas ya ocupadas por otra', async () => {
+      const cookie = await loginAsAdmin(app);
+      await request(app.getHttpServer())
+        .post('/api/reservations')
+        .send(booking({ checkIn: inDays(20), checkOut: inDays(24) }))
+        .expect(201);
+      const movable = await request(app.getHttpServer())
+        .post('/api/reservations')
+        .send(booking({ email: 'movible@example.com' }))
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/reservations/${movable.body.id}`)
+        .set('Cookie', cookie)
+        .send({ checkIn: inDays(21), checkOut: inDays(25) })
+        .expect(400);
+
+      expect(res.body.message).toMatch(/ya está reservada/i);
+    });
+
+    it('respeta un totalPrice explícito en vez de recalcularlo', async () => {
+      const cookie = await loginAsAdmin(app);
+      const created = await request(app.getHttpServer())
+        .post('/api/reservations')
+        .send(booking())
+        .expect(201);
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/reservations/${created.body.id}`)
+        .set('Cookie', cookie)
+        .send({ checkIn: inDays(10), checkOut: inDays(16), totalPrice: 999 })
+        .expect(200);
+
+      expect(Number(res.body.totalPrice)).toBe(999);
+    });
   });
 });
