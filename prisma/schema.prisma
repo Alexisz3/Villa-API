@@ -180,6 +180,11 @@ model ContentSection {
   // secciones simples lo dejan en null. Cada editor del panel define su forma.
   data        Json?
   isActive    Boolean  @default(true)
+  // Borrador pendiente de publicar: foto completa de {title, description,
+  // banner, images, data, isActive}. Cada guardado del panel escribe acá, no
+  // en las columnas vivas de arriba; "publish" copia este objeto a esas
+  // columnas y lo deja en null. null = no hay cambios pendientes.
+  draft       Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

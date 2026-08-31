@@ -18,6 +18,10 @@ const serviceMock = {
   remove: jest.fn(),
   findAll: jest.fn(),
   findByName: jest.fn(),
+  findAllAdmin: jest.fn(),
+  reorderImages: jest.fn(),
+  publish: jest.fn(),
+  discardDraft: jest.fn(),
 };
 
 const mediaMock = {
@@ -127,6 +131,41 @@ describe('ContentSectionsController', () => {
       expect(serviceMock.update).toHaveBeenCalledWith(3, {
         images: ['/uploads/from-library.png'],
       });
+    });
+  });
+
+  describe('findAllAdmin', () => {
+    it('delega en el service', async () => {
+      serviceMock.findAllAdmin.mockResolvedValue([{ id: 1 }]);
+      const result = await controller.findAllAdmin();
+      expect(result).toEqual([{ id: 1 }]);
+    });
+  });
+
+  describe('reorderImages', () => {
+    it('pasa el id y el nuevo orden al service', async () => {
+      serviceMock.reorderImages.mockResolvedValue({ id: 3 });
+      await controller.reorderImages(3, { images: ['/uploads/b.png', '/uploads/a.png'] });
+      expect(serviceMock.reorderImages).toHaveBeenCalledWith(3, [
+        '/uploads/b.png',
+        '/uploads/a.png',
+      ]);
+    });
+  });
+
+  describe('publish', () => {
+    it('delega en el service', async () => {
+      serviceMock.publish.mockResolvedValue({ id: 3 });
+      await controller.publish(3);
+      expect(serviceMock.publish).toHaveBeenCalledWith(3);
+    });
+  });
+
+  describe('discardDraft', () => {
+    it('delega en el service', async () => {
+      serviceMock.discardDraft.mockResolvedValue({ id: 3 });
+      await controller.discardDraft(3);
+      expect(serviceMock.discardDraft).toHaveBeenCalledWith(3);
     });
   });
 });

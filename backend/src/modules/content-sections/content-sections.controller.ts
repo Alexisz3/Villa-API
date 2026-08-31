@@ -11,6 +11,7 @@ import { MediaService } from '../media/media.service';
 import { ContentSectionsService } from './content-sections.service';
 import { CreateContentSectionDto } from './dto/create-content-section.dto';
 import { UpdateContentSectionDto } from './dto/update-content-section.dto';
+import { ReorderImagesDto } from './dto/reorder-images.dto';
 
 const storage = createImageDiskStorage();
 
@@ -28,6 +29,18 @@ export class ContentSectionsController {
       return this.contentSectionsService.findByName(sectionName);
     }
     return this.contentSectionsService.findAll();
+  }
+
+  // Igual que arriba pero incluye el borrador de cada sección (columna
+  // `draft`), para que el panel pueda precargar cambios sin publicar. No hay
+  // permiso `content_sections:read` en el seed, así que se reutiliza
+  // `update` ("si puedes editar, puedes ver el borrador").
+  @UseGuards(AuthGuard, PermissionsGuard)
+  @RequirePermissions('content_sections:update')
+  @ApiBearerAuth()
+  @Get('admin')
+  findAllAdmin() {
+    return this.contentSectionsService.findAllAdmin();
   }
 
   @UseGuards(AuthGuard, PermissionsGuard)
@@ -84,6 +97,33 @@ export class ContentSectionsController {
       dto.images = files.images.map(f => `/uploads/${f.filename}`);
     }
     return this.contentSectionsService.update(id, dto);
+  }
+
+  @UseGuards(AuthGuard, PermissionsGuard)
+  @RequirePermissions('content_sections:update')
+  @ApiBearerAuth()
+  @Patch(':id/images/order')
+  reorderImages(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ReorderImagesDto,
+  ) {
+    return this.contentSectionsService.reorderImages(id, dto.images);
+  }
+
+  @UseGuards(AuthGuard, PermissionsGuard)
+  @RequirePermissions('content_sections:update')
+  @ApiBearerAuth()
+  @Post(':id/publish')
+  publish(@Param('id', ParseIntPipe) id: number) {
+    return this.contentSectionsService.publish(id);
+  }
+
+  @UseGuards(AuthGuard, PermissionsGuard)
+  @RequirePermissions('content_sections:update')
+  @ApiBearerAuth()
+  @Post(':id/discard-draft')
+  discardDraft(@Param('id', ParseIntPipe) id: number) {
+    return this.contentSectionsService.discardDraft(id);
   }
 
   @UseGuards(AuthGuard, PermissionsGuard)
