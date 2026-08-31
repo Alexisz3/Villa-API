@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    name: Lint, build, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install (root)
+        run: npm ci
+
+      - name: Install (backend)
+        working-directory: backend
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      # El script `lint` del package.json corre con --fix y reformatea todo
+      # el árbol — en CI se corre sin --fix. `continue-on-error` porque hoy
+      # el repo no está prettier-clean (cientos de diffs de formato
+      # preexistentes, no de este cambio); arreglarlo es un trabajo aparte.
+      # Igual queda visible en el resumen del job para no perderlo de vista.
+      - name: Lint
+        working-directory: backend
+        continue-on-error: true
+        run: npx eslint "{src,apps,libs,test}/**/*.ts"
+
+      - name: Build
+        working-directory: backend
+        run: npm run build
+
+      - name: Unit tests
+        working-directory: backend
+        run: npm run test
+
+  e2e:
+    name: E2E tests (Postgres real)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: villa_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/villa_db?schema=public
+      JWT_SECRET: ci-e2e-secret
+      ADMIN_SEED_PASSWORD: CiAdminVilla2026!
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install (root)
+        run: npm ci
+
+      - name: Install (backend)
+        working-directory: backend
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      # Crea (si hace falta) y migra+siembra villa_test_db, derivada de
+      # DATABASE_URL cambiando villa_db -> villa_test_db.
+      - name: Setup test database
+        run: npx tsx prisma/setup-test-db.ts
+
+      - name: E2E tests
+        working-directory: backend
+        run: npm run test:e2e
