@@ -10,6 +10,57 @@ import { readImageDimensions } from '../../common/image-dimensions';
 import { QueryMediaDto } from './dto/query-media.dto';
 import { UpdateMediaDto } from './dto/update-media.dto';
 
+// Etiqueta legible de cada carpeta (mismo criterio que `folderLabel` del
+// frontend, que deriva de los grupos del catálogo).
+const FOLDER_LABELS: Record<string, string> = {
+  inicio: 'Inicio',
+  nosotros: 'Nosotros',
+  cavas: 'Cavas',
+  pizzeria: 'Pizzería',
+  rooftop: 'RoofTop',
+  'zona-pet': 'Zona Pet',
+  bobolon: 'Bobolón',
+  galeria: 'Galería',
+  habitaciones: 'Habitaciones',
+  parque: 'Parque',
+  'santo-seco': 'Santo Seco',
+  general: 'General',
+};
+
+function folderLabel(slug: string): string {
+  return (
+    FOLDER_LABELS[slug] ??
+    slug
+      .split('-')
+      .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+      .join(' ')
+  );
+}
+
+// Nombre de arranque para una imagen recién subida. Si el archivo trae un
+// nombre real lo humaniza ("Cavas1" -> "Cavas 1"); si es un nombre
+// autogenerado (banner-1787…-752…) cae en la etiqueta de la carpeta.
+export function deriveAltText(originalName: string, folder: string): string {
+  const base = (originalName || '')
+    .replace(/\.[a-z0-9]+$/i, '') // sin extensión
+    .replace(/^cms-[a-z0-9]+-/i, ''); // sin prefijo "cms-<área>-"
+
+  if (/^(banner|images?|media|room)-?\d/i.test(base) || /^\d{6,}/.test(base)) {
+    return folderLabel(folder);
+  }
+
+  const humanized = base
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([a-zA-Z])(\d)/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return humanized
+    ? humanized[0].toUpperCase() + humanized.slice(1)
+    : folderLabel(folder);
+}
+
 // Lugares donde un archivo puede estar referenciado. Se usa para bloquear el
 // envío a papelera de un recurso en uso.
 export type AssetReferences = {
@@ -43,6 +94,7 @@ export class MediaService {
             sizeBytes: file.size,
             width,
             height,
+            alt: deriveAltText(file.originalname, cleanFolder ?? 'general'),
             ...(cleanFolder ? { folder: cleanFolder } : {}),
           },
           update: {}, // ya existe: no se pisa nada

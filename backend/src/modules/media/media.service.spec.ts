@@ -1,7 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { MediaService } from './media.service';
+import { MediaService, deriveAltText } from './media.service';
 import { PrismaService } from '../../database/prisma.service';
+
+describe('deriveAltText', () => {
+  it('humaniza un nombre real', () => {
+    expect(deriveAltText('Cavas1.webp', 'cavas')).toBe('Cavas 1');
+    expect(deriveAltText('cms-galseco-SecoCarne.webp', 'santo-seco')).toBe('Seco Carne');
+  });
+
+  it('cae en la etiqueta de la carpeta para nombres autogenerados', () => {
+    expect(deriveAltText('banner-1787593762630-877362732.webp', 'pizzeria')).toBe('Pizzería');
+    expect(deriveAltText('images-1787593952214-745110599.webp', 'zona-pet')).toBe('Zona Pet');
+  });
+});
 
 const prismaMock = {
   mediaAsset: {
