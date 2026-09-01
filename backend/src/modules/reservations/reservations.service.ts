@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { PrismaService } from '../../database/prisma.service';
-import { BLOCKING_STATUSES } from '../rooms/availability.service';
+import { BLOCKING_STATUSES, todayStr } from '../rooms/availability.service';
 
 // Estados que "ocupan" una habitación en el calendario. Una reserva CANCELADA
 // no bloquea; una COMPLETADA tampoco (la estadía ya terminó). Se usa la misma
@@ -178,6 +178,18 @@ export class ReservationsService {
     if (roomId !== undefined || checkIn !== undefined || checkOut !== undefined) {
       if (nextCheckOut <= nextCheckIn) {
         throw new BadRequestException('La fecha de salida debe ser mayor a la fecha de entrada.');
+      }
+
+      // No se puede mover la entrada a una fecha pasada. Se permite conservar
+      // un checkIn que ya está en el pasado (editar una reserva vieja), pero
+      // no ponerle una fecha de entrada nueva anterior a hoy.
+      if (checkIn !== undefined) {
+        const today = new Date(`${todayStr()}T00:00:00.000Z`);
+        const newDay = `${nextCheckIn.toISOString().slice(0, 10)}`;
+        const oldDay = `${existing.checkIn.toISOString().slice(0, 10)}`;
+        if (new Date(`${newDay}T00:00:00.000Z`) < today && newDay !== oldDay) {
+          throw new BadRequestException('La fecha de entrada no puede ser anterior a hoy.');
+        }
       }
 
       const conflictingReservation = await this.prisma.reservation.findFirst({

@@ -216,6 +216,38 @@ describe('ReservationsService', () => {
       });
     });
 
+    it('rechaza mover la fecha de entrada a una fecha pasada', async () => {
+      prismaMock.reservation.findUnique.mockResolvedValue({
+        id: 1,
+        roomId: 1,
+        checkIn: new Date(inDays(10)),
+        checkOut: new Date(inDays(14)),
+      });
+
+      await expect(
+        service.update(1, { checkIn: inDays(-3), checkOut: inDays(4) }),
+      ).rejects.toThrow(/anterior a hoy/);
+
+      expect(prismaMock.reservation.update).not.toHaveBeenCalled();
+    });
+
+    it('permite editar una reserva que ya empezó sin tocar su checkIn pasado', async () => {
+      prismaMock.reservation.findUnique.mockResolvedValue({
+        id: 1,
+        roomId: 1,
+        checkIn: new Date(inDays(-2)),
+        checkOut: new Date(inDays(2)),
+        room: activeRoom,
+      });
+      prismaMock.reservation.findFirst.mockResolvedValue(null);
+      prismaMock.reservation.update.mockResolvedValue({ id: 1 });
+
+      // Mismo checkIn (pasado), solo estira la salida.
+      await service.update(1, { checkIn: inDays(-2), checkOut: inDays(5) });
+
+      expect(prismaMock.reservation.update).toHaveBeenCalled();
+    });
+
     it('traduce la constraint EXCLUDE también en update', async () => {
       prismaMock.reservation.findUnique.mockResolvedValue({
         id: 1,
