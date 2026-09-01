@@ -39,9 +39,8 @@ export class ReservationsService {
       throw new BadRequestException("La cabaña seleccionada no existe.");
     }
 
-    if (!room.isActive || room.status.toLowerCase() !== 'active') {
+    if (room.status.toLowerCase() !== 'active') {
       throw new BadRequestException("La cabaña seleccionada no esta disponible actualmente.");
-
     }
 
     // B. Buscar si ya existe una reserva que se cruce en esas fechas para esa misma habitación
@@ -127,7 +126,6 @@ export class ReservationsService {
     // Buscamos todas las habitaciones
     return this.prisma.room.findMany({
       where: {
-        isActive: true,
         status: { equals: 'active', mode: 'insensitive' },
         // Y que NO tengan reservas que se crucen con estas fechas
         reservations: {

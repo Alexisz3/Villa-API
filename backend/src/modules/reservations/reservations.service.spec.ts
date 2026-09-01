@@ -80,10 +80,10 @@ describe('ReservationsService', () => {
       );
     });
 
-    it('rechaza cuando la habitación está inactiva', async () => {
+    it('rechaza cuando la habitación está desactivada (status != active)', async () => {
       prismaMock.room.findUnique.mockResolvedValue({
         ...activeRoom,
-        isActive: false,
+        status: 'inactive',
       });
       await expect(service.create(baseCreateDto())).rejects.toThrow(
         /no esta disponible/,
@@ -343,7 +343,7 @@ describe('ReservationsService', () => {
       await service.findAvailableRooms(inDays(10), inDays(14));
 
       const where = prismaMock.room.findMany.mock.calls[0][0].where;
-      expect(where.isActive).toBe(true);
+      expect(where.status).toEqual({ equals: 'active', mode: 'insensitive' });
       expect(where.reservations.none.status).toEqual({
         in: ['PENDIENTE', 'CONFIRMADA'],
       });

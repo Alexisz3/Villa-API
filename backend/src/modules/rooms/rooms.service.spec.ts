@@ -46,13 +46,13 @@ describe('RoomsService', () => {
   });
 
   describe('findAll (público)', () => {
-    it('sólo trae habitaciones activas y con status active', async () => {
+    it('sólo trae habitaciones con status active (sin mirar isActive)', async () => {
       prismaMock.room.findMany.mockResolvedValue([]);
       await service.findAll();
 
       const where = prismaMock.room.findMany.mock.calls[0][0].where;
-      expect(where.isActive).toBe(true);
       expect(where.status).toEqual({ equals: 'active', mode: 'insensitive' });
+      expect(where.isActive).toBeUndefined();
     });
   });
 

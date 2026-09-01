@@ -20,8 +20,10 @@ export class RoomsService {
 
   async findAll() {
     const rooms = await this.prisma.room.findMany({
+      // La visibilidad pública la controla SOLO `status` (lo que el panel
+      // de admin activa/desactiva). `isActive` quedó como campo duplicado
+      // y ya no se usa para filtrar.
       where: {
-        isActive: true,
         status: { equals: 'active', mode: 'insensitive' },
       },
       orderBy: {
@@ -49,7 +51,6 @@ export class RoomsService {
 
     return this.prisma.room.findMany({
       where: {
-        isActive: true,
         status: { equals: 'active', mode: 'insensitive' },
         // Solo PENDIENTE / CONFIRMADA ocupan la habitación — una reserva
         // COMPLETADA o CANCELADA no impide una reserva nueva en esas fechas.
