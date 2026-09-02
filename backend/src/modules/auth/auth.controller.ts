@@ -5,6 +5,8 @@ import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthGuard } from './auth.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { RequirePermissions } from './decorators/require-permissions.decorator';
@@ -64,6 +66,27 @@ export class AuthController {
         // así JavaScript en el navegador no puede leerlo (mitiga robo por XSS).
         const { access_token } = await this.authService.login(dto);
         res.cookie(ACCESS_TOKEN_COOKIE, access_token, this.cookieOptions(ACCESS_TOKEN_MAX_AGE_MS));
+        return { success: true };
+    }
+
+    // Límite estricto: pedir un enlace de recuperación es raro y caro (manda
+    // un correo). Siempre responde 201 aunque el correo no exista.
+    @Throttle({ default: { limit: 3, ttl: 60000 } })
+    @Post('forgot-password')
+    @ApiOperation({ summary: 'Enviar un enlace para restablecer la contraseña' })
+    @ApiResponse({ status: 201, description: 'Solicitud recibida (no revela si el correo existe).' })
+    async forgotPassword(@Body() dto: ForgotPasswordDto) {
+        await this.authService.forgotPassword(dto.email);
+        return { success: true };
+    }
+
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
+    @Post('reset-password')
+    @ApiOperation({ summary: 'Fijar una nueva contraseña con el token del correo' })
+    @ApiResponse({ status: 201, description: 'Contraseña actualizada.' })
+    @ApiResponse({ status: 400, description: 'Token inválido o expirado.' })
+    async resetPassword(@Body() dto: ResetPasswordDto) {
+        await this.authService.resetPassword(dto.token, dto.password);
         return { success: true };
     }
 

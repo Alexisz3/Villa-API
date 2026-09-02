@@ -20,6 +20,16 @@ Módulo encargado del registro y autenticación de usuarios.
   - **Body esperado:** `email`, `password`.
   - **Respuestas:** `201 Created` (Éxito), `401 Unauthorized` (Credenciales inválidas).
 
+- **`POST /auth/forgot-password`**
+  - **Descripción:** Envía por correo un enlace para restablecer la contraseña. Responde siempre igual, exista o no la cuenta (no filtra qué correos están registrados). Enlace válido 1 hora. Requiere SMTP configurado (`SMTP_*` en `.env`); si no, el enlace se registra en el log del servidor.
+  - **Body esperado:** `email`.
+  - **Respuestas:** `201 Created` (`{ success: true }`), `400 Bad Request` (email mal formado). Límite: 3 por minuto.
+
+- **`POST /auth/reset-password`**
+  - **Descripción:** Fija una nueva contraseña usando el token recibido por correo. Quema el token (un solo uso) y cualquier otro pendiente del mismo usuario.
+  - **Body esperado:** `token`, `password` (8–100 caracteres).
+  - **Respuestas:** `201 Created` (`{ success: true }`), `400 Bad Request` (token inválido/expirado/usado o contraseña inválida). Límite: 5 por minuto.
+
 ---
 
 ## 2. Reservations (Reservas)

@@ -27,16 +27,33 @@ model ContactMessage {
 }
 
 model User {
-  id           Int        @id @default(autoincrement())
-  email        String     @unique
-  passwordHash String
-  name         String
-  isActive     Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  userRoles    UserRole[]
+  id                  Int                  @id @default(autoincrement())
+  email               String               @unique
+  passwordHash        String
+  name                String
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  userRoles           UserRole[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+// Token de un solo uso para "recuperar contraseña". Nunca se guarda el token
+// en claro: la fila lleva su hash SHA-256 y el enlace del correo lleva el
+// valor original. Un token vale 1 hora y se marca `usedAt` al gastarlo.
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model Role {
