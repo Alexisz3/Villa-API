@@ -133,3 +133,9 @@ Módulo para gestionar los mensajes dejados por los usuarios desde la página we
 - **`PATCH /contact-messages/:id/status`** *(Requiere permisos: `contact_messages:update`)*
   - **Descripción:** Cambia el estado del mensaje (ej: `pendiente`, `leido`, `respondido`, `archivado`).
   - **Respuestas:** `200 OK`, `404 Not Found`.
+
+## 6. Content Sections (Secciones de Contenido)
+
+**`GET /content-sections`** - Listar todas las secciones
+
+**`GET /content-sections/:sectionName`** - Obtener sección por nombre
