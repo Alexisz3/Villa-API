@@ -1,8 +1,9 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, HttpAdapterHost } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from "@nestjs/common"
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { PrismaClientExceptionFilter } from './common/prisma-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -39,6 +40,16 @@ async function bootstrap() {
       transform: true,
     }
   ));
+
+  // Traduce los errores de Prisma (unique, FK, no encontrado, BD caida) a
+  // respuestas HTTP limpias en vez de un 500 opaco.
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter));
+
+  // Permite que Prisma cierre la conexion de forma limpia al recibir
+  // SIGTERM/SIGINT (deploys, reinicios de contenedor).
+  app.enableShutdownHooks();
+
   await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap();

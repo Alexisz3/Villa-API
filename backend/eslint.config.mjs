@@ -33,8 +33,9 @@ export default tseslint.config(
     },
   },
   {
-    // Los specs inspeccionan `mock.calls`, cuyo tipo es `any`. Relajar las
-    // reglas type-checked ahí evita ruido sin bajar el listón del código.
+    // Los specs inspeccionan `mock.calls` y matchers asimétricos, cuyo tipo
+    // es `any`. Relajar las reglas type-checked ahí evita ruido sin bajar
+    // el listón del código.
     files: ['**/*.spec.ts', 'test/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
