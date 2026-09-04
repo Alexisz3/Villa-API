@@ -2,6 +2,10 @@ node_modules
 # Keep environment variables out of version control
 .env
 
+# Volcado completo de la base (incluye el hash de la contraseña real del
+# admin). Se genera con el comando en prisma/snapshots/README.md.
+prisma/snapshots/full-backup.sql
+
 backend/src/generated
 
 # Claude Code local settings

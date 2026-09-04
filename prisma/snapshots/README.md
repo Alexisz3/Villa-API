@@ -8,7 +8,7 @@ Respaldos en SQL para poder recuperar el contenido si la base se borra
 |---|---|---|
 | `cms-content.sql` | `content_sections` + `media_assets` (todo el contenido editable del sitio: banners, galerías, textos, personajes) | cada vez que se ajusta el contenido desde el panel |
 | `business-data.sql` | `rooms`, `customers`, `reservations`, `contact_messages` | punto en el tiempo — regenerar seguido |
-| `full-backup.sql` | volcado completo con `--clean` (esquema + datos) | punto en el tiempo |
+| `full-backup.sql` | volcado completo con `--clean` (esquema + datos) — **no está versionado** (contiene el hash real de la contraseña del admin), solo vive en el disco local | punto en el tiempo |
 
 ## Regenerar los snapshots
 
