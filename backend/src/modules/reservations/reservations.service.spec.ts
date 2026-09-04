@@ -18,9 +18,19 @@ const prismaMock = {
   },
 };
 
-// Fechas siempre relativas a "ahora" para que los tests no caduquen.
+// Fechas siempre relativas a "ahora" para que los tests no caduquen. Se fija
+// una única medianoche UTC de referencia (no `Date.now()` en cada llamada):
+// así dos fechas del mismo test siempre difieren en un múltiplo exacto de
+// un día, igual que en producción (el date-picker manda fechas sin hora) —
+// evita un `Math.ceil` de por sí correcto redondeando hacia arriba por unos
+// milisegundos de diferencia entre dos `Date.now()` consecutivos.
+const TODAY_UTC_MIDNIGHT = (() => {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  return d.getTime();
+})();
 const inDays = (days: number) =>
-  new Date(Date.now() + days * 86_400_000).toISOString();
+  new Date(TODAY_UTC_MIDNIGHT + days * 86_400_000).toISOString();
 
 const activeRoom = {
   id: 1,
